@@ -1,0 +1,44 @@
+# Python & Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Secrets & Environment Variables
+.env
+backend/.env
+*.env.local
+
+# Database & Generated Data
+data/vector_db/
+data/temp_audio/*.mp3
+data/temp_audio/*.webm
+data/temp_audio/*.wav
+!data/temp_audio/test.mp3
+data/documents/*
+!data/documents/sample_knowledge.txt
+
+# Streamlit Local Runtime
+.streamlit/credentials.toml
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Temporary Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# HuggingFace & PyTorch Cache
+.cache/

@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice RAG Assistant | Audio Knowledge Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: #131b2e;
+      --bg-card-hover: #1c2744;
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --secondary: #ec4899;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --radius-lg: 20px;
+      --radius-md: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(236, 72, 153, 0.12) 0%, transparent 40%);
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 2.5rem;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      background: rgba(11, 15, 25, 0.7);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .brand-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+
+    .brand-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #fff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .lang-select, .btn-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lang-select:hover, .btn-action:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: rgba(16, 185, 129, 0.1);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* Main Container */
+    .container {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      flex: 1;
+      height: calc(100vh - 75px);
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Sidebar / Documents panel */
+    .sidebar {
+      border-right: 1px solid var(--border-color);
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Upload Drop Zone */
+    .dropzone {
+      border: 2px dashed rgba(99, 102, 241, 0.4);
+      border-radius: var(--radius-md);
+      padding: 1.5rem 1rem;
+      text-align: center;
+      background: rgba(99, 102, 241, 0.05);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .dropzone svg {
+      width: 36px;
+      height: 36px;
+      stroke: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .dropzone-text {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .dropzone-subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* Document List */
+    .docs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .doc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+
+    .doc-item:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: var(--bg-card-hover);
+    }
+
+    .doc-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .doc-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+
+    .doc-name {
+      font-size: 0.85rem;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 170px;
+    }
+
+    .btn-delete {
+      background: transparent;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .btn-delete:hover {
+      opacity: 1;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Chat & Voice Center Section */
+    .main-section {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      height: 100%;
+    }
+
+    .chat-container {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Welcome Banner */
+    .welcome-card {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.08));
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      text-align: center;
+      max-width: 650px;
+      margin: 2rem auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .welcome-card h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.8rem;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(90deg, #a5b4fc, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .welcome-card p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    /* Message Bubbles */
+    .message-row {
+      display: flex;
+      gap: 12px;
+      max-width: 80%;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-row.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-row.assistant {
+      align-self: flex-start;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .avatar.user-avatar {
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+    }
+
+    .avatar.bot-avatar {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .message-bubble {
+      padding: 1rem 1.25rem;
+      border-radius: 18px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      position: relative;
+    }
+
+    .message-row.user .message-bubble {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-row.assistant .message-bubble {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: #e2e8f0;
+      border-bottom-left-radius: 4px;
+    }
+
+    .sources-tag {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.78rem;
+      color: var(--accent);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .source-pill {
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .audio-play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+
+    .audio-play-btn:hover {
+      background: rgba(99, 102, 241, 0.4);
+      color: white;
+    }
+
+    /* Voice / Input Control Bar */
+    .control-bar {
+      padding: 1.5rem 2.5rem;
+      border-top: 1px solid var(--border-color);
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .voice-action-area {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* Pulse Mic Button */
+    .mic-button-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mic-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 25px var(--primary-glow);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 2;
+    }
+
+    .mic-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 35px rgba(99, 102, 241, 0.7);
+    }
+
+    .mic-btn svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+
+    .mic-btn.recording {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.7);
+      animation: pulseRecord 1.5s infinite;
+    }
+
+    @keyframes pulseRecord {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .mic-status-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .text-input-form {
+      display: flex;
+      width: 100%;
+      max-width: 750px;
+      gap: 10px;
+    }
+
+    .text-input {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .text-input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-send {
+      background: var(--primary);
+      border: none;
+      color: white;
+      padding: 0 20px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-send:hover {
+      background: #4f46e5;
+    }
+
+    /* Waveform visualizer */
+    .waveform-visualizer {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      margin-top: 4px;
+    }
+
+    .waveform-visualizer.active {
+      display: flex;
+    }
+
+    .bar {
+      width: 4px;
+      background: #ef4444;
+      border-radius: 4px;
+      animation: bounce 1s infinite alternate ease-in-out;
+    }
+
+    .bar:nth-child(2) { animation-delay: 0.1s; height: 16px; }
+    .bar:nth-child(3) { animation-delay: 0.2s; height: 24px; }
+    .bar:nth-child(4) { animation-delay: 0.3s; height: 12px; }
+    .bar:nth-child(5) { animation-delay: 0.4s; height: 20px; }
+
+    @keyframes bounce {
+      from { transform: scaleY(0.4); }
+      to { transform: scaleY(1.2); }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      </div>
+      <div>
+        <div class="brand-title">Audio RAG Voice Assistant</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="systemStatus">Ready</span>
+      </div>
+
+      <select id="langSelect" class="lang-select">
+        <option value="hi">🇮🇳 Hindi (हिन्दी)</option>
+        <option value="en">🇬🇧 English</option>
+      </select>
+
+      <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--text-muted); cursor:pointer;">
+        <input type="checkbox" id="autoPlayAudio" checked> Auto-Speak
+      </label>
+    </div>
+  </header>
+
+  <!-- Container -->
+  <div class="container">
+    
+    <!-- Sidebar: Knowledge Base Documents -->
+    <aside class="sidebar">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📚 Knowledge Base</span>
+        </div>
+        <span id="docCount" style="font-size: 0.8rem; color: var(--text-muted);">0 docs</span>
+      </div>
+
+      <!-- Upload Dropzone -->
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <div class="dropzone-text">Click or Drag & Drop Documents</div>
+        <div class="dropzone-subtext">Upload PDF or TXT to add to knowledge base</div>
+        <input type="file" id="fileInput" accept=".pdf,.txt,.md" multiple>
+      </div>
+
+      <!-- Document List -->
+      <div class="docs-list" id="docsList">
+        <!-- Rendered via JS -->
+      </div>
+
+      <button class="btn-action" style="width: 100%; justify-content: center;" onclick="reindexAll()">
+        🔄 Re-index All Documents
+      </button>
+    </aside>
+
+    <!-- Main Content: Chat & Voice Area -->
+    <main class="main-section">
+      <div class="chat-container" id="chatContainer">
+        <!-- Welcome banner -->
+        <div class="welcome-card" id="welcomeCard">
+          <h2>Boliye, Main Sun Raha Hoon 🎙️</h2>
+          <p>Apne documents upload karein aur microphone button daba kar koi bhi sawaal poochein. Assistant document se accurate answers bol kar batayega.</p>
+        </div>
+      </div>
+
+      <!-- Bottom Audio / Voice Controls -->
+      <div class="control-bar">
+        <!-- Voice Area -->
+        <div class="voice-action-area">
+          <div class="mic-button-wrapper">
+            <button class="mic-btn" id="micBtn" title="Hold or Click to Record">
+              <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </button>
+          </div>
+
+          <div>
+            <div class="mic-status-label" id="micStatusLabel">Click Mic to Speak</div>
+            <div class="waveform-visualizer" id="visualizer">
+              <div class="bar" style="height:12px"></div>
+              <div class="bar" style="height:20px"></div>
+              <div class="bar" style="height:14px"></div>
+              <div class="bar" style="height:24px"></div>
+              <div class="bar" style="height:10px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Input Form -->
+        <form class="text-input-form" id="textForm" onsubmit="handleTextSubmit(event)">
+          <input type="text" id="textInput" class="text-input" placeholder="Ya apna sawaal yahan type karein..." autocomplete="off">
+          <button type="submit" class="btn-send">
+            <span>Send</span>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </form>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Audio Player (Hidden) -->
+  <audio id="audioPlayer"></audio>
+
+  <script>
+    const chatContainer = document.getElementById('chatContainer');
+    const welcomeCard = document.getElementById('welcomeCard');
+    const micBtn = document.getElementById('micBtn');
+    const micStatusLabel = document.getElementById('micStatusLabel');
+    const visualizer = document.getElementById('visualizer');
+    const textInput = document.getElementById('textInput');
+    const langSelect = document.getElementById('langSelect');
+    const autoPlayAudio = document.getElementById('autoPlayAudio');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const docsList = document.getElementById('docsList');
+    const docCount = document.getElementById('docCount');
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    // Load initial documents
+    loadDocuments();
+
+    // Setup Drag & Drop
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        uploadFiles(e.dataTransfer.files);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        uploadFiles(e.target.files);
+      }
+    });
+
+    async function loadDocuments() {
+      try {
+        const res = await fetch('/api/documents');
+        const data = await res.json();
+        renderDocuments(data.documents || []);
+      } catch (err) {
+        console.error('Error fetching documents:', err);
+      }
+    }
+
+    function renderDocuments(docs) {
+      docCount.textContent = `${docs.length} docs`;
+      if (docs.length === 0) {
+        docsList.innerHTML = '<div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">Koi documents upload nahi hain.</div>';
+        return;
+      }
+      docsList.innerHTML = docs.map(d => `
+        <div class="doc-item">
+          <div class="doc-info">
+            <span class="doc-badge">${d.extension.replace('.', '')}</span>
+            <span class="doc-name" title="${d.filename}">${d.filename}</span>
+          </div>
+          <button class="btn-delete" title="Delete" onclick="deleteDoc('${d.filename}')">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function uploadFiles(files) {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          micStatusLabel.textContent = `Uploading ${file.name}...`;
+          const res = await fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const result = await res.json();
+          if (result.success) {
+            console.log(result.message);
+          }
+        } catch (e) {
+          console.error('Upload error:', e);
+        }
+      }
+      micStatusLabel.textContent = 'Click Mic to Speak';
+      loadDocuments();
+    }
+
+    async function deleteDoc(filename) {
+      if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+      try {
+        await fetch(`/api/documents/${filename}`, { method: 'DELETE' });
+        loadDocuments();
+      } catch (e) {
+        console.error('Delete error:', e);
+      }
+    }
+
+    async function reindexAll() {
+      try {
+        micStatusLabel.textContent = 'Re-indexing Knowledge Base...';
+        const res = await fetch('/api/documents/reindex', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || 'Re-indexed successfully!');
+        micStatusLabel.textContent = 'Click Mic to Speak';
+      } catch (e) {
+        alert('Re-indexing failed: ' + e);
+      }
+    }
+
+    // Audio Recording
+    micBtn.addEventListener('click', toggleRecording);
+
+    async function toggleRecording() {
+      if (!isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = sendVoiceQuery;
+
+        mediaRecorder.start();
+        isRecording = true;
+        micBtn.classList.add('recording');
+        visualizer.classList.add('active');
+        micStatusLabel.textContent = 'Listening... Speak now';
+      } catch (err) {
+        alert('Microphone access denied or not available: ' + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        visualizer.classList.remove('active');
+        micStatusLabel.textContent = 'Processing voice query...';
+      }
+    }
+
+    async function sendVoiceQuery() {
+      if (audioChunks.length === 0) return;
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'query.webm');
+      formData.append('lang', langSelect.value);
+
+      // Show temporary user message
+      hideWelcome();
+      const tempUserRow = appendMessage('user', '🎙️ (Processing voice...)');
+
+      try {
+        const res = await fetch('/api/chat/voice', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        
+        // Update user message with transcribed text
+        tempUserRow.querySelector('.message-bubble').innerHTML = `🎙️ "${data.user_query}"`;
+
+        // Append assistant response
+        appendAssistantMessage(data.answer, data.audio_url, data.sources);
+
+        // Auto play audio if enabled
+        if (autoPlayAudio.checked && data.audio_url) {
+          playAudio(data.audio_url);
+        }
+      } catch (e) {
+        tempUserRow.querySelector('.message-bubble').innerHTML = '❌ Voice query processing error';
+      } finally {
+        micStatusLabel.textContent = 'Click Mic to Speak';
+      }
+    }
+
+    async function handleTextSubmit(e) {
+      e.preventDefault();
+      const text = textInput.value.trim();
+      if (!text) return;
+      textInput.value = '';
+
+      hideWelcome();
+      appendMessage('user', text);
+
+      micStatusLabel.textContent = 'Thinking...';
+      try {
+        const res = await fetch('/api/chat/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: text, lang: langSelect.value })
+        });
+        const data = await res.json();
+        appendAssistantMessage(data.answer, data.audio_url, data.sources);
+
+        if (autoPlayAudio.checked && data.audio_url) {
+          playAudio(data.audio_url);
+        }
+      } catch (e) {
+        appendMessage('assistant', 'Jawab lene mein samasya aayi.');
+      } finally {
+        micStatusLabel.textContent = 'Click Mic to Speak';
+      }
+    }
+
+    function hideWelcome() {
+      if (welcomeCard) welcomeCard.style.display = 'none';
+    }
+
+    function appendMessage(sender, text) {
+      const row = document.createElement('div');
+      row.className = `message-row ${sender}`;
+      row.innerHTML = `
+        <div class="avatar ${sender === 'user' ? 'user-avatar' : 'bot-avatar'}">
+          ${sender === 'user' ? '👤' : '🤖'}
+        </div>
+        <div class="message-bubble">${text}</div>
+      `;
+      chatContainer.appendChild(row);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return row;
+    }
+
+    function appendAssistantMessage(text, audioUrl, sources = []) {
+      const row = document.createElement('div');
+      row.className = 'message-row assistant';
+      
+      let sourcesHtml = '';
+      if (sources && sources.length > 0) {
+        sourcesHtml = `
+          <div class="sources-tag">
+            <span>Sources:</span>
+            ${sources.map(s => `<span class="source-pill">📄 ${s.file}${s.page ? ` (p.${s.page})` : ''}</span>`).join('')}
+          </div>
+        `;
+      }
+
+      let audioBtnHtml = '';
+      if (audioUrl) {
+        audioBtnHtml = `
+          <div>
+            <button class="audio-play-btn" onclick="playAudio('${audioUrl}')">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span>Listen</span>
+            </button>
+          </div>
+        `;
+      }
+
+      row.innerHTML = `
+        <div class="avatar bot-avatar">🤖</div>
+        <div class="message-bubble">
+          <div>${text}</div>
+          ${audioBtnHtml}
+          ${sourcesHtml}
+        </div>
+      `;
+      chatContainer.appendChild(row);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function playAudio(url) {
+      audioPlayer.src = url;
+      audioPlayer.play().catch(e => console.log('Autoplay restriction:', e));
+    }
+  </script>
+</body>
+</html>
